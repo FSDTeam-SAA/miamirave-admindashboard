@@ -1,5 +1,4 @@
 
-import { TrendingUp, Package, Users } from "lucide-react"
 import { StatCard } from "./Stat-card"
 import { NewUserChart } from "./New-user-chart"
 import { LiveProductChart } from "./Live-product-chart"
