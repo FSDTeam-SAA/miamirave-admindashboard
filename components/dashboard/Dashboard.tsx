@@ -1,11 +1,15 @@
-
+"use client"
 import { StatCard } from "./Stat-card"
 import { NewUserChart } from "./New-user-chart"
 import { LiveProductChart } from "./Live-product-chart"
 import { RevenueChart } from "./Revenue-chart"
 import Bradcrumb from "../shyard/Bradcrumb"
+import { useSession } from "next-auth/react"
 
 export default function DashboardPage() {
+  const session=useSession();
+  const token=session
+  console.log(token)
   return (
     <div className="flex min-h-screen">
     
