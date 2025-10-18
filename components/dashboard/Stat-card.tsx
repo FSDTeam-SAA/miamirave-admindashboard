@@ -1,5 +1,4 @@
 import { Card, CardContent } from "@/components/ui/card"
-import type { LucideIcon } from "lucide-react"
 import Image from "next/image"
 
 interface StatCardProps {
