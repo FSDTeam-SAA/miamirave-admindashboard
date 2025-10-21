@@ -60,9 +60,9 @@ export default function ChangePasswordPage() {
 
       const token = session?.accessToken
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/change-password`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/change-password`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,

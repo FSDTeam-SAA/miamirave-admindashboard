@@ -1,126 +1,92 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Bradcrumb from "@/components/shyard/Bradcrumb";
 import { CustomPagination } from "@/components/shyard/CustomPagination";
-import Link from "next/link";
-import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 interface User {
-  id: number;
-  name: string;
-  avatar: string;
-  totalOrder: number;
-  deliveredOrder: number;
-  pendingOrder: number;
-  cancelOrder: number;
+  _id: string;
+  fullName?: string;
+  username?: string;
+  email: string;
+  profileImage?: string;
+  phone?: string;
+  address?: string;
+  role?: string;
 }
 
-const mockUsers: User[] = [
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-  {
-    id: 1140,
-    name: "John Smith",
-    avatar: "👤",
-    totalOrder: 200,
-    deliveredOrder: 170,
-    pendingOrder: 20,
-    cancelOrder: 10,
-  },
-];
-
 export default function UserList() {
-      const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 5 // Adjust based on your needs
-    const totalItems = mockUsers.length
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
+  const { data: session } = useSession();
+
+  const token = session?.accessToken;
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/user/all-user`,
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const data = await res.json();
+
+        if (data.success) {
+          setUsers(data.data);
+        } else {
+          throw new Error(data.message || "Failed to fetch users");
+        }
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // Pagination logic
+  const totalItems = users.length;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentUsers = users.slice(indexOfFirstItem, indexOfLastItem);
+
+  if (loading) {
+    return <p className="text-center py-10 text-lg">Loading users...</p>;
+  }
+
+  if (error) {
+    return <p className="text-center py-10 text-red-500">{error}</p>;
+  }
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="">
+      <header>
         <div className="flex items-center justify-between px-8 py-4">
           <Bradcrumb pageName="User List" />
           <div className="bg-[#F0217A] text-white rounded-lg w-[214px] pl-6 py-3">
-            <p className="text-xl font-medium">Total User</p>
-            <p className="text-base font-bold">41,200.00</p>
+            <p className="text-xl font-medium">Total Users</p>
+            <p className="text-base font-bold">{users.length}</p>
           </div>
         </div>
       </header>
 
       {/* Table */}
-      <main className="">
-        <div className="overflow-x-auto ">
+      <main>
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-gray-50">
@@ -131,58 +97,52 @@ export default function UserList() {
                   User Name
                 </th>
                 <th className="px-6 py-4 text-left text-[18px] font-semibold text-[#2F2F2F]">
-                  Total Order
+                  Email
                 </th>
                 <th className="px-6 py-4 text-left text-[18px] font-semibold text-[#2F2F2F]">
-                  Delivered Order
+                  Phone
                 </th>
                 <th className="px-6 py-4 text-left text-[18px] font-semibold text-[#2F2F2F]">
-                  Pending Order
-                </th>
-                <th className="px-6 py-4 text-left text-[18px] font-semibold text-[#2F2F2F]">
-                  Cancel Order
-                </th>
-                <th className="px-6 py-4 text-left text-[18px] font-semibold text-[#2F2F2F]">
-                  Action
+                  Role
                 </th>
               </tr>
             </thead>
+
             <tbody>
-              {mockUsers.map((user, idx) => (
+              {currentUsers.map((user) => (
                 <tr
-                  key={idx}
+                  key={user._id}
                   className="border-b border-border hover:bg-gray-50"
                 >
                   <td className="px-6 py-4 text-[18px] text-[#3E3E3E]">
-                    {user.id}
+                    {user._id.slice(-6)} {/* Shortened ID */}
                   </td>
+
                   <td className="px-6 py-4 text-[18px] text-[#3E3E3E]">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 flex items-center justify-center text-[18px]">
-                        {user.avatar}
+                        {user.profileImage ? (
+                          <img
+                            src={user.profileImage}
+                            alt={user.fullName || "avatar"}
+                            className="rounded-full h-8 w-8 object-cover"
+                          />
+                        ) : (
+                          "👤"
+                        )}
                       </div>
-                      {user.name}
+                      {user.fullName || user.username || "N/A"}
                     </div>
                   </td>
+
                   <td className="px-6 py-4 text-[18px] text-[#3E3E3E]">
-                    {user.totalOrder}
+                    {user.email}
                   </td>
                   <td className="px-6 py-4 text-[18px] text-[#3E3E3E]">
-                    {user.deliveredOrder}
+                    {user.phone || "N/A"}
                   </td>
                   <td className="px-6 py-4 text-[18px] text-[#3E3E3E]">
-                    {user.pendingOrder}
-                  </td>
-                  <td className="px-6 py-4 text-[18px] text-[#3E3E3E]">
-                    {user.cancelOrder}
-                  </td>
-                  <td className="px-6 py-4 text-[18px]">
-                    <Link
-                      href={`/users/${user.id}`}
-                      className="text-[#F0217A] hover:underline font-medium"
-                    >
-                      Details
-                    </Link>
+                    {user.role || "N/A"}
                   </td>
                 </tr>
               ))}
