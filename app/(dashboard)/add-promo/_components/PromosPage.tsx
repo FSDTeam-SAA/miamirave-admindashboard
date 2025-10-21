@@ -1,102 +1,159 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
-import { useState } from "react"
-import Bradcrumb from "@/components/shyard/Bradcrumb"
-import { CustomPagination } from "@/components/shyard/CustomPagination"
+import { useState } from "react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Edit, Eye, Trash2 } from "lucide-react";
+import { PromoFormModal } from "./promo-form-modal";
+import { DeletePromoModal } from "./delete-promo-modal";
+import { CustomPagination } from "@/components/shyard/CustomPagination";
+import Link from "next/link";
 
 interface Promo {
-  id: number
-  name: string
-  thumbnail: string
-  productCount: number
+  _id: string;
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  image: string;
 }
 
-const mockPromos: Promo[] = [
-  { id: 1, name: "SUPER SAVING - 18%", thumbnail: "🎉", productCount: 12 },
-  { id: 2, name: "SUPER SAVING - 18%", thumbnail: "🎉", productCount: 12 },
-  { id: 3, name: "SUPER SAVING - 18%", thumbnail: "🎉", productCount: 12 },
-  { id: 4, name: "SUPER SAVING - 18%", thumbnail: "🎉", productCount: 120 },
-  { id: 5, name: "SUPER SAVING - 18%", thumbnail: "🎉", productCount: 120 },
-  { id: 6, name: "SUPER SAVING - 18%", thumbnail: "🎉", productCount: 120 },
-]
+interface PromosTableProps {
+  promos: Promo[];
+  isLoading: boolean;
+}
 
-export default function PromosPage() {
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
-  const totalItems = mockPromos.length
+export function PromosTable({ promos, isLoading }: PromosTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedPromo, setSelectedPromo] = useState<Promo | undefined>();
+  const [deletePromoId, setDeletePromoId] = useState<string>("");
+  const [deletePromoName, setDeletePromoName] = useState<string>("");
+
+  const itemsPerPage = 5;
+  const totalItems = promos.length;
+  const paginatedPromos = promos.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleEdit = (promo: Promo) => {
+    setSelectedPromo(promo);
+    setFormModalOpen(true);
+  };
+
+  const handleDeleteClick = (promo: Promo) => {
+    setDeletePromoId(promo._id);
+    setDeletePromoName(promo.name);
+    setDeleteModalOpen(true);
+  };
+
+  const handleCreateNew = () => {
+    setSelectedPromo(undefined);
+    setFormModalOpen(true);
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading promos...</div>;
+  }
+
+  if (promos.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground mb-4">No promos found</p>
+        <Button onClick={handleCreateNew}>Create First Promo</Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <div className="py-6">
-        <div className="flex items-center justify-between">
-          <Bradcrumb pageName="Promos List" subPageName="" />
-          <Link href="/add-promo/add">
-            <Button className="bg-[#34813C] hover:bg-[#34813C]/90 w-[200px] h-[50px] text-white">
-              <Plus className="mr-2 h-5 w-5" />
-              Add Promo
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="py-6">
-        <div className="overflow-hidden rounded-lg">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-6 py-4 text-left text-[#2F2F2F] text-[18px] font-medium text-foreground">
-                  Promo Name
-                </th>
-                <th className="px-6 py-4 text-left text-[#2F2F2F] text-[18px] font-medium text-foreground">
-                  Under of products
-                </th>
-                <th className="px-6 py-4 text-left text-[#2F2F2F] text-[18px] font-medium text-foreground">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockPromos.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((promo) => (
-                <tr key={promo.id} className="border-b border-border last:border-0">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="relative h-[50px] w-[137px] flex-shrink-0 overflow-hidden rounded-md bg-green-600 flex items-center justify-center text-lg">
-                        {promo.thumbnail}
-                      </div>
-                      <span className="text-base text-[#3E3E3E] font-medium text-foreground">
-                        {promo.name}
-                      </span>
+    <>
+      <div className="overflow-hidden rounded-lg border">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="px-6 py-4 text-left text-sm font-semibold">
+                Promo Name
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold">
+                Description
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold">
+                Date Range
+              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold">
+                Action
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedPromos.map((promo) => (
+              <tr key={promo._id} className="border-b last:border-0">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                      <Image
+                        src={promo.image || "/placeholder.svg"}
+                        alt={promo.name}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-base text-[#3E3E3E] font-medium text-foreground">
-                    {promo.productCount}
-                  </td>
-                  <td className="px-6 py-4">
-                    <Link href={`/add-promo/${promo.id}`} className="text-base text-[#F0217A] font-medium hover:underline">
-                      Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <span className="font-medium">{promo.name}</span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-muted-foreground">
+                  {promo.description.substring(0, 50)}...
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {new Date(promo.startDate).toLocaleDateString()} -{" "}
+                  {new Date(promo.endDate).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 flex items-center gap-2">
+                  <Button
+                    variant="ghost"
 
-        {/* Pagination */}
-        <div className="w-full">
-          <CustomPagination
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-          />
-        </div>
+                    size="sm"
+                    onClick={() => handleEdit(promo)}
+                    title="Edit promo"
+                  >
+                    <Edit size={18} className="text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteClick(promo)}
+                    title="Delete promo"
+                  >
+                    <Trash2 size={18} className="text-destructive" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
-  )
+
+      <CustomPagination
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+      />
+
+      <PromoFormModal
+        open={formModalOpen}
+        onOpenChange={setFormModalOpen}
+        promo={selectedPromo}
+      />
+
+      <DeletePromoModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        promoId={deletePromoId}
+        promoName={deletePromoName}
+      />
+    </>
+  );
 }

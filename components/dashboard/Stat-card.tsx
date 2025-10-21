@@ -9,17 +9,17 @@ interface StatCardProps {
   iconBgColor: string
 }
 
-export function StatCard({ title, value, icon,  iconBgColor }: StatCardProps) {
+export function StatCard({ title, value, icon, iconColor, iconBgColor }: StatCardProps) {
   return (
     <Card className="border-0 shadow-sm">
-      <CardContent className="p-6">
+      <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[24px] font-semibold text-[#131313]">{title}</p>
-            <p className="text-[18px] font-midium text-[#424242] mt-2">●{value}</p>
+            <p className="text-sm text-gray-600 mb-2">{title}</p>
+            <p className="text-2xl font-bold text-[#131313]">{value}</p>
           </div>
-          <div className={`p-3 rounded-lg ${iconBgColor}`}>
-           <Image src={icon} width={1000} height={1000} alt="icon" className="w-[54px] h-[54px]" />
+          <div className={`${iconBgColor} p-3 rounded-lg`}>
+            <Image src={icon || "/placeholder.svg"} alt={title} width={24} height={24} className={iconColor} />
           </div>
         </div>
       </CardContent>

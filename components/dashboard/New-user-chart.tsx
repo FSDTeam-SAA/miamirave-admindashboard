@@ -1,34 +1,80 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Line, LineChart, XAxis, YAxis, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-
-const data = [
-  { date: "3 Oct", users: 500 },
-  { date: "10 Oct", users: 1200 },
-  { date: "15 Oct", users: 1000 },
-  { date: "20 Oct", users: 2800 },
-  { date: "25 Oct", users: 3500 },
-  { date: "27 Oct", users: 2900 },
-  { date: "30 Oct", users: 2000 },
-]
+import { useGraphsData } from "@/hooks/use-graphs-data"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export function NewUserChart() {
+  const [period, setPeriod] = useState<"day" | "week" | "month">("month")
+  const { data, isLoading, error } = useGraphsData(period)
+
+  const chartData = data?.newUsers || []
+
+  if (isLoading) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <Skeleton className="h-8 w-32" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-[32px] font-bold text-[#131313]">New User</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-red-500">Error loading chart data</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-[32px] font-bold text-[#131313]">New User</CardTitle>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPeriod("day")}
+              className={
+                period === "day" ? "bg-[#E91E8C] text-white hover:bg-[#D01A7D]" : "text-gray-600 hover:bg-gray-100"
+              }
+            >
               Day
             </Button>
-            <Button variant="ghost" size="sm" className="text-gray-600 hover:bg-gray-100">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPeriod("week")}
+              className={
+                period === "week" ? "bg-[#E91E8C] text-white hover:bg-[#D01A7D]" : "text-gray-600 hover:bg-gray-100"
+              }
+            >
               Week
             </Button>
-            <Button size="sm" className="bg-[#E91E8C] hover:bg-[#D01A7D] text-white rounded-full px-4">
+            <Button
+              size="sm"
+              onClick={() => setPeriod("month")}
+              className={
+                period === "month"
+                  ? "bg-[#E91E8C] hover:bg-[#D01A7D] text-white rounded-full px-4"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-full px-4"
+              }
+            >
               Month
             </Button>
           </div>
@@ -45,7 +91,7 @@ export function NewUserChart() {
           className="h-[300px] w-full"
         >
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
+            <LineChart data={chartData} margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
               <XAxis dataKey="date" tick={{ fill: "#999", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis
                 tick={{ fill: "#999", fontSize: 11 }}

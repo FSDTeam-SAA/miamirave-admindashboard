@@ -1,313 +1,330 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useEffect, useRef, useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Spinner } from "@/components/ui/spinner"
-import type { Shop } from "@/lib/api-client"
-import { useCreateShop, useUpdateShop } from "@/hooks/use-shops"
+import { useEffect, useRef, useState, Suspense } from "react";
+import dynamic from "next/dynamic";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
+import { useCreateShop, useUpdateShop } from "@/hooks/use-shops";
+
+// Lazy load map modal
+const LocationPickerModal = dynamic(
+  () => import("./LocationPickerModal").then((mod) => mod.LocationPickerModal),
+  { ssr: false }
+);
 
 interface ShopFormModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  shop?: Shop
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  shop?: any;
 }
 
+const DAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
 export function ShopFormModal({ open, onOpenChange, shop }: ShopFormModalProps) {
-  const [formData, setFormData] = useState<Record<string, any>>({
+  const [formData, setFormData] = useState({
     name: "",
     description: "",
-    email: "",
-    phone: "",
     address: "",
+    phone: "",
+    email: "",
     latitude: "",
     longitude: "",
-  })
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  });
 
-  // Preview of either the selected file OR the existing shop image
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const objectUrlRef = useRef<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [storeHours, setStoreHours] = useState<Record<string, { start: string; end: string }>>({});
+  const [inStoreHours, setInStoreHours] = useState<Record<string, { start: string; end: string }>>({});
 
-  const createMutation = useCreateShop()
-  const updateMutation = useUpdateShop()
-  const isLoading = createMutation.isPending || updateMutation.isPending
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Helpers for object URL lifecycle
-  const clearObjectUrl = () => {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current)
-      objectUrlRef.current = null
-    }
-  }
+  const createMutation = useCreateShop();
+  const updateMutation = useUpdateShop();
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
+  // Initialize form data
   useEffect(() => {
-    // When opening or switching shop, seed fields + preview with existing image
     if (shop) {
+      // Normalize store_hours array → object
+      const normalizedStoreHours: Record<string, { start: string; end: string }> = {};
+      (shop.store_hours || []).forEach((item: any) => {
+        normalizedStoreHours[item.day] = {
+          start: item.start_time || "",
+          end: item.end_time || "",
+        };
+      });
+
+      // Normalize in_store_hours array → object
+      const normalizedInStoreHours: Record<string, { start: string; end: string }> = {};
+      (shop.in_store_hours || []).forEach((item: any) => {
+        normalizedInStoreHours[item.day] = {
+          start: item.start_time || "",
+          end: item.end_time || "",
+        };
+      });
+
       setFormData({
-        name: shop.name ?? "",
-        description: shop.description ?? "",
-        email: shop.email ?? "",
-        phone: shop.phone ?? "",
-        address: shop.location?.address ?? "",
-        latitude: shop.location?.latitude ?? "",
-        longitude: shop.location?.longitude ?? "",
-      })
-      setImageFile(null)
-      clearObjectUrl()
-      setPreviewUrl(shop.image || null) // <-- show previous image
+        name: shop.name || "",
+        description: shop.description || "",
+        address: shop.location?.address || "",
+        phone: shop.phone || "",
+        email: shop.email || "",
+        latitude: shop.location?.latitude?.toString() || "",
+        longitude: shop.location?.longitude?.toString() || "",
+      });
+
+      setPreviewUrl(shop.image || null);
+      setStoreHours(normalizedStoreHours);
+      setInStoreHours(normalizedInStoreHours);
     } else {
+      // Reset for new shop
       setFormData({
         name: "",
         description: "",
-        email: "",
-        phone: "",
         address: "",
+        phone: "",
+        email: "",
         latitude: "",
         longitude: "",
-      })
-      setImageFile(null)
-      clearObjectUrl()
-      setPreviewUrl(null)
+      });
+      setPreviewUrl(null);
+      setStoreHours({});
+      setInStoreHours({});
     }
-
-    // When modal closes, also clean up
-    return () => {
-      clearObjectUrl()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shop, open])
+  }, [shop, open]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
 
-    // Update selected file + live preview
-    setImageFile(file)
-    clearObjectUrl()
-    const url = URL.createObjectURL(file)
-    objectUrlRef.current = url
-    setPreviewUrl(url)
-  }
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
-  const handleRemoveSelected = () => {
-    // Remove newly picked file, revert preview to existing image (if any)
-    setImageFile(null)
-    clearObjectUrl()
-    setPreviewUrl(shop?.image || null)
-
-    // Reset file input visually
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+  const handleTimeChange = (day: string, type: "store" | "pickup", key: "start" | "end", value: string) => {
+    if (type === "store") {
+      setStoreHours((prev) => ({
+        ...prev,
+        [day]: { ...prev[day], [key]: value },
+      }));
+    } else {
+      setInStoreHours((prev) => ({
+        ...prev,
+        [day]: { ...prev[day], [key]: value },
+      }));
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const form = new FormData()
-    form.append("name", formData.name)
-    form.append("description", formData.description)
-    form.append("email", formData.email)
-    form.append("phone", formData.phone)
-    form.append("address", formData.address)
-    form.append("latitude", String(formData.latitude))
-    form.append("longitude", String(formData.longitude))
+    // Convert objects → arrays
+    const storeHoursArray = Object.entries(storeHours).map(([day, { start, end }]) => ({
+      day,
+      start_time: start,
+      end_time: end,
+    }));
 
-    // Only append a file if user actually selected one.
-    // (Keeps the previous image on the server if editing and no new file chosen.)
-    if (imageFile) {
-      // keep the key your backend expects; you were using "imageLink"
-      form.append("imageLink", imageFile)
-    }
+    const inStoreHoursArray = Object.entries(inStoreHours).map(([day, { start, end }]) => ({
+      day,
+      start_time: start,
+      end_time: end,
+    }));
+
+    const form = new FormData();
+    form.append("name", formData.name);
+    form.append("description", formData.description);
+    form.append("address", formData.address);
+    form.append("phone", formData.phone);
+    form.append("email", formData.email);
+    form.append("latitude", formData.latitude);
+    form.append("longitude", formData.longitude);
+    form.append("store_hours", JSON.stringify(storeHoursArray));
+    form.append("in_store_hours", JSON.stringify(inStoreHoursArray));
+
+    // ✅ Use correct field name for backend
+    if (imageFile) form.append("imageLink", imageFile);
 
     if (shop) {
-      await updateMutation.mutateAsync({ id: shop._id, formData: form })
+      await updateMutation.mutateAsync({ id: shop._id, formData: form });
     } else {
-      await createMutation.mutateAsync(form)
+      await createMutation.mutateAsync(form);
     }
 
-    if (!isLoading) {
-      onOpenChange(false)
-    }
-  }
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{shop ? "Edit Shop" : "Add New Shop"}</DialogTitle>
+          <DialogTitle>{shop ? "Edit Shop" : "Add Shop"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Shop Name *</Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Shop name and location button */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Shop Name *</Label>
               <Input
-                id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="Enter shop name"
+                placeholder="Write a shop name..."
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Enter email"
-                required
-              />
+            <div className="flex items-end justify-end">
+              <Button type="button" variant="outline" onClick={() => setShowLocationModal(true)}>
+                Set Location on Map
+              </Button>
             </div>
           </div>
 
+          {/* Email and phone */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                placeholder="Enter phone number"
-                required
-              />
+            <div>
+              <Label>Email *</Label>
+              <Input name="email" value={formData.email} onChange={handleInputChange} required />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Address *</Label>
-              <Input
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                placeholder="Enter address"
-                required
-              />
+            <div>
+              <Label>Phone *</Label>
+              <Input name="phone" value={formData.phone} onChange={handleInputChange} required />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="latitude">Latitude *</Label>
-              <Input
-                id="latitude"
-                name="latitude"
-                type="number"
-                step="0.000001"
-                value={formData.latitude}
-                onChange={handleInputChange}
-                placeholder="Enter latitude"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="longitude">Longitude *</Label>
-              <Input
-                id="longitude"
-                name="longitude"
-                type="number"
-                step="0.000001"
-                value={formData.longitude}
-                onChange={handleInputChange}
-                placeholder="Enter longitude"
-                required
-              />
-            </div>
+          {/* Address + coordinates */}
+          <div>
+            <Label>Address *</Label>
+            <Input name="address" value={formData.address} onChange={handleInputChange} required />
+            {formData.latitude && formData.longitude && (
+              <p className="text-sm text-gray-500 mt-1">
+                📍 Latitude: {formData.latitude} | Longitude: {formData.longitude}
+              </p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Enter shop description"
-              rows={3}
-            />
+          {/* Description */}
+          <div>
+            <Label>Description</Label>
+            <Textarea name="description" value={formData.description} onChange={handleInputChange} />
           </div>
 
-          {/* Image picker + previews */}
-          <div className="space-y-3">
-            <Label htmlFor="image">Shop Image</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="image"
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                disabled={isLoading}
-              />
+          {/* Image upload */}
+          <div>
+            <Label>Thumbnail</Label>
+            <div className="flex gap-3 items-center">
+              <Input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} />
               {imageFile && (
-                <Button type="button" variant="outline" onClick={handleRemoveSelected}>
-                  Remove selected
+                <Button type="button" variant="outline" onClick={handleRemoveImage}>
+                  Remove
                 </Button>
               )}
             </div>
-
-            {previewUrl ? (
-              <div className="rounded-lg border p-3">
-                <p className="text-sm text-muted-foreground mb-2">
-                  {imageFile ? "Selected image preview" : "Current image"}
-                </p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={previewUrl}
-                  alt="Shop image preview"
-                  className="h-40 w-40 object-cover rounded-md"
-                />
+            {previewUrl && (
+              <div className="mt-2">
+                <img src={previewUrl} alt="Preview" className="h-32 w-32 object-cover rounded-md" />
               </div>
-            ) : shop?.image ? (
-              <div className="rounded-lg border p-3">
-                <p className="text-sm text-muted-foreground mb-2">Current image</p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={shop.image}
-                  alt="Existing shop image"
-                  className="h-40 w-40 object-cover rounded-md"
-                />
-              </div>
-            ) : null}
+            )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+          {/* Hours Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Store Hours */}
+            <div>
+              <Label>Available Store Hours</Label>
+              {DAYS.map((day) => (
+                <div key={day} className="grid grid-cols-3 gap-2 items-center my-2">
+                  <span className="text-rose-600 text-sm">{day}</span>
+                  <Input
+                    type="time"
+                    value={storeHours[day]?.start || ""}
+                    onChange={(e) => handleTimeChange(day, "store", "start", e.target.value)}
+                  />
+                  <Input
+                    type="time"
+                    value={storeHours[day]?.end || ""}
+                    onChange={(e) => handleTimeChange(day, "store", "end", e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* In-store Pickup */}
+            <div>
+              <Label>Available In-store Pickup</Label>
+              {DAYS.map((day) => (
+                <div key={day} className="grid grid-cols-3 gap-2 items-center my-2">
+                  <span className="text-rose-600 text-sm">{day}</span>
+                  <Input
+                    type="time"
+                    value={inStoreHours[day]?.start || ""}
+                    onChange={(e) => handleTimeChange(day, "pickup", "start", e.target.value)}
+                  />
+                  <Input
+                    type="time"
+                    value={inStoreHours[day]?.end || ""}
+                    onChange={(e) => handleTimeChange(day, "pickup", "end", e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading} className="bg-green-600 hover:bg-green-700">
               {isLoading ? (
                 <>
-                  <Spinner className="mr-2 h-4 w-4" />
-                  {shop ? "Updating..." : "Creating..."}
+                  <Spinner className="mr-2 h-4 w-4" /> Saving...
                 </>
-              ) : shop ? (
-                "Update Shop"
               ) : (
-                "Create Shop"
+                "Save"
               )}
             </Button>
           </div>
         </form>
+
+        {/* Map Modal */}
+        <Suspense fallback={null}>
+          <LocationPickerModal
+            open={showLocationModal}
+            onOpenChange={setShowLocationModal}
+            onSelect={(lat, lng) => setFormData((p) => ({ ...p, latitude: lat, longitude: lng }))}
+            initialPosition={[
+              parseFloat(formData.latitude) || 23.8103,
+              parseFloat(formData.longitude) || 90.4125,
+            ]}
+          />
+        </Suspense>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

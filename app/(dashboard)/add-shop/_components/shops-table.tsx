@@ -68,7 +68,7 @@ export function ShopsTable({ shops, onView, onEdit, onDelete, isLoading }: Shops
               <td className="px-6 py-4">
                 <p className="text-sm text-foreground">{shop.location.address}</p>
                 <p className="text-xs text-muted-foreground">
-                  {shop.location.latitude.toFixed(4)}, {shop.location.longitude.toFixed(4)}
+                  {shop.location.latitude?.toFixed(4)}, {shop.location.longitude?.toFixed(4)}
                 </p>
               </td>
               <td className="px-6 py-4">

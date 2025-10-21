@@ -11,13 +11,13 @@ export default function SettingPage() {
 
         {/* Setting Options */}
         <div className="space-y-4">
-          <Link
+          {/* <Link
             href="/setting/personal-information"
             className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-6 py-5 transition-shadow hover:shadow-md"
           >
             <span className="text-base font-medium text-gray-900">Personal Information</span>
             <ChevronRight className="h-5 w-5 text-gray-400" />
-          </Link>
+          </Link> */}
 
           <Link
             href="/setting/change-password"

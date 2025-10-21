@@ -1,9 +1,12 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useSession } from "next-auth/react"
 
 export function DashboardHeader() {
   // Dummy user data (replace with real auth data later)
+  const { data: session } = useSession()
+  console.log(session)
   const userName = "John Doe"
   const avatarImage = "" // use fallback if empty
   const initials = userName.charAt(0).toUpperCase()
